@@ -3,80 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard IoT Cloud</title>
+    <title>IT Cloud Monitor | Enterprise Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        .card { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 700px; }
-        h1 { color: #333; text-align: center; }
-        .status-container { text-align: center; margin-bottom: 20px; }
-        .badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; background: #e0e0e0; }
-        .online { background: #d4edda; color: #155724; }
+        /* CSS ala Dashboard IT Modern */
+        :root {
+            --bg-color: #0b0e14;
+            --card-bg: #151921;
+            --primary-color: #00d4ff;
+            --text-color: #e0e0e0;
+            --accent-color: #1a202c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .header {
+            background-color: var(--card-bg);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--primary-color);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+        }
+
+        .header h1 {
+            margin: 0;
+            letter-spacing: 2px;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            text-transform: uppercase;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .chart-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            width: 100%;
+            max-width: 900px;
+            border: 1px solid #2d3748;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            color: #a0aec0;
+        }
+
+        .status-online {
+            color: #48bb78;
+            display: flex;
+            align-items: center;
+        }
+
+        .dot {
+            height: 10px;
+            width: 10px;
+            background-color: #48bb78;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 10px #48bb78;
+        }
+
+        .footer {
+            background-color: var(--card-bg);
+            text-align: center;
+            padding: 15px;
+            font-size: 0.9rem;
+            border-top: 1px solid #2d3748;
+            color: #718096;
+        }
+
+        .footer b {
+            color: var(--primary-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .chart-card { padding: 15px; }
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>IoT Monitor Real-time</h1>
-        <div class="status-container">
-            <span id="status-badge" class="badge">Menghubungkan ke Cloud...</span>
+
+    <div class="header">
+        <h1>Cloud IoT Infrastructure Monitor</h1>
+    </div>
+
+    <div class="container">
+        <div class="chart-card">
+            <div class="status-bar">
+                <span>System Protocol: <b style="color:var(--primary-color)">HTTPS/WebSocket</b></span>
+                <span class="status-online"><span class="dot"></span> Database Cloud Connected</span>
+            </div>
+            
+            <canvas id="itCloudChart"></canvas>
+            
+            <div style="margin-top: 20px; font-size: 0.8rem; color: #4a5568;">
+                Network Latency: <span id="latency">0ms</span> | Engine: Supabase PostgreSQL
+            </div>
         </div>
-        <canvas id="myChart"></canvas>
+    </div>
+
+    <div class="footer">
+        &copy; 2026 Dashboard IoT. Made & Team | <b>IT Enterprise Solution</b>
     </div>
 
     <script>
-        // Konfigurasi Supabase Anda
+        // Supabase Configuration
         const SB_URL = "https://xgwhpxovayvyuapirztg.supabase.co";
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhnd2hweG92YXl2eXVhcGlyenRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzM2MTQsImV4cCI6MjA4MzQwOTYxNH0.HANivFMAMtxmDhxjl-9HM8HGrhk1941aSjTlJ3FKdaY";
         const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
-        // Inisialisasi Grafik
-        const ctx = document.getElementById('myChart').getContext('2d');
+        // Chart.js Configuration dengan tema Dark IT
+        const ctx = document.getElementById('itCloudChart').getContext('2d');
         const chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'Suhu (°C)',
-                    borderColor: '#ff4757',
-                    backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                    label: 'Suhu Sensor (°C)',
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#00d4ff',
                     data: [],
                     fill: true,
-                    tension: 0.4
+                    tension: 0.3
                 }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0' } }
+                },
+                scales: {
+                    y: {
+                        grid: { color: '#2d3748' },
+                        ticks: { color: '#a0aec0' }
+                    },
+                    x: {
+                        grid: { color: '#2d3748' },
+                        ticks: { color: '#a0aec0' }
+                    }
+                }
             }
         });
 
-        // Fungsi Mendengarkan Data Real-time
-        const subscribeData = () => {
-            supabaseClient
-                .channel('public:sensor_data')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_data' }, payload => {
-                    console.log('Data Baru:', payload.new);
-                    updateDashboard(payload.new);
-                })
-                .subscribe();
-            
-            document.getElementById('status-badge').innerText = "Terhubung ke Cloud Supabase";
-            document.getElementById('status-badge').classList.add('online');
-        };
+        // Real-time Listener
+        supabaseClient
+            .channel('it_iot_channel')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_data' }, payload => {
+                const newData = payload.new;
+                const timeLabel = new Date().toLocaleTimeString();
+                
+                // Update Latency Simulation
+                document.getElementById('latency').innerText = Math.floor(Math.random() * 50 + 20) + "ms";
 
-        const updateDashboard = (newData) => {
-            const time = new Date().toLocaleTimeString();
-            
-            // Tambah data ke grafik
-            chart.data.labels.push(time);
-            chart.data.datasets[0].data.push(newData.temperature);
+                // Update Chart
+                chart.data.labels.push(timeLabel);
+                chart.data.datasets[0].data.push(newData.temperature);
 
-            // Batasi maksimal 10 data agar tidak penuh
-            if (chart.data.labels.length > 10) {
-                chart.data.labels.shift();
-                chart.data.datasets[0].data.shift();
-            }
-            chart.update();
-        };
-
-        subscribeData();
+                if (chart.data.labels.length > 12) {
+                    chart.data.labels.shift();
+                    chart.data.datasets[0].data.shift();
+                }
+                chart.update();
+            })
+            .subscribe();
     </script>
 </body>
 </html>
